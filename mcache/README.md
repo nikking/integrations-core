@@ -2,17 +2,20 @@
 
 ## Overview
 
-The Agent's memcache check lets you track memcache's memory use, hits, misses, evictions, fill percent, and much more.
+The Agent's Memcache check lets you track Memcache's memory use, hits, misses, evictions, fill percent, and much more.
 
 ## Setup
-
-Follow the instructions below to install and configure this check for an Agent running on a host. For containerized environments, see the [Autodiscovery Integration Templates][1] for guidance on applying these instructions.
-
 ### Installation
 
-The memcache check is included in the [Datadog Agent][2] package, so you don't need to install anything else on your memcache servers.
+The Memcache check is included in the [Datadog Agent][2] package, so you don't need to install anything else on your Memcache servers.
 
 ### Configuration
+
+Follow the instructions below to configure this check for an Agent running on a host. For containerized environments, see the [Containerized](#containerized) section
+
+#### Metric Collection
+
+##### Host
 
 1. Edit the `mcache.d/conf.yaml` file, in the `conf.d/` folder at the root of your [Agent's configuration directory][3].
   See the [sample mcache.d/conf.yaml][4] for all available configuration options:
@@ -21,17 +24,41 @@ The memcache check is included in the [Datadog Agent][2] package, so you don't n
       init_config:
 
       instances:
-        - url: localhost  # url used to connect to the memcached instance
-          port: 11212 # optional; default is 11211
-      #    socket: /path/to/memcache/socket # alternative to url/port; 'dd-agent' user must have read/write permission
-          options:
-            items: false # set to true to collect items stats
-            slabs: false # set to true to collect slabs stats
-      #    tags:
-      #    - optional_tag
+        ## @param url - string - required
+        ## url used to connect to the Memcached instance.
+        #
+        - url: localhost
     ```
 
-2. [Restart the Agent][5] to begin sending memcache metrics to Datadog.
+2. [Restart the Agent][5] to begin sending Memcache metrics to Datadog.
+
+##### Containerized
+
+For containerized environments, see the [Autodiscovery Integration Templates][1] for guidance on applying the parameters below.
+
+| Parameter            | Value                                 |
+|----------------------|---------------------------------------|
+| `<INTEGRATION_NAME>` | `mcache`                              |
+| `<INIT_CONFIG>`      | blank or `{}`                         |
+| `<INSTANCE_CONFIG>`  | `{"url": "%%host%%","port": "11211"}` |
+
+#### Log Collection
+
+**Available for Agent >6.0**
+
+Add this configuration block to your `mcache.d/conf.yaml` file to start collecting your Memcached Logs:
+
+    ```yaml
+      logs:
+          - type: file
+            path: /var/log/memcached.log
+            source: memcached
+            service: mcache
+    ```
+    
+
+Change the `path` and `service` parameter values and configure them for your environment.
+[Restart the Agent][5] to validate these changes.
 
 ### Validation
 

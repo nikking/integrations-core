@@ -38,10 +38,12 @@ LOGGER = logging.getLogger(__file__)
 DEFAULT_TIMEOUT = 10
 
 STANDARD_FIELDS = {
+    'auth_type': '',
     'connect_timeout': None,
     'extra_headers': None,
     'headers': None,
     'kerberos_auth': None,
+    'kerberos_cache': None,
     'kerberos_delegate': False,
     'kerberos_force_initiate': False,
     'kerberos_hostname': None,
@@ -169,7 +171,14 @@ class RequestsWrapper(object):
         auth = None
         if config['password']:
             if config['username']:
-                auth = (config['username'], config['password'])
+                auth_type = config.get('auth_type', 'basic').lower()
+                if auth_type == 'digest':
+                    auth = requests.auth.HTTPDigestAuth(config['username'], config['password'])
+                else:
+                    if auth_type != 'basic':
+                        self.logger.debug('auth_type %s is not supported, defaulting to basic', auth_type)
+                    auth = (config['username'], config['password'])
+
             elif config['ntlm_domain']:
                 ensure_ntlm()
 
@@ -271,6 +280,8 @@ class RequestsWrapper(object):
 
         if config['kerberos_keytab']:
             self.request_hooks.append(lambda: handle_kerberos_keytab(config['kerberos_keytab']))
+        if config['kerberos_cache']:
+            self.request_hooks.append(lambda: handle_kerberos_cache(config['kerberos_cache']))
 
     def get(self, url, **options):
         return self._request('get', url, options)
@@ -292,7 +303,7 @@ class RequestsWrapper(object):
 
     def _request(self, method, url, options):
         if self.log_requests:
-            self.logger.debug(u'Sending {} request to {}'.format(method.upper(), url))
+            self.logger.debug(u'Sending %s request to %s', method.upper(), url)
 
         if self.no_proxy_uris:
             parsed_uri = urlparse(url)
@@ -311,7 +322,7 @@ class RequestsWrapper(object):
                 stack.enter_context(hook())
 
             if persist:
-                return getattr(self.session, method)(url, **options)
+                return getattr(self.session, method)(url, **self.populate_options(options))
             else:
                 return getattr(requests, method)(url, **self.populate_options(options))
 
@@ -373,6 +384,22 @@ def handle_kerberos_keytab(keytab_file):
         del os.environ['KRB5_CLIENT_KTNAME']
     else:
         os.environ['KRB5_CLIENT_KTNAME'] = old_keytab_path
+
+
+@contextmanager
+def handle_kerberos_cache(cache_file_path):
+    """
+    :param cache_file_path: Location of the Kerberos credentials (ticket) cache. It defaults to /tmp/krb5cc_[uid]
+    """
+    old_cache_path = os.environ.get('KRB5CCNAME')
+    os.environ['KRB5CCNAME'] = cache_file_path
+
+    yield
+
+    if old_cache_path is None:
+        del os.environ['KRB5CCNAME']
+    else:
+        os.environ['KRB5CCNAME'] = old_cache_path
 
 
 def ensure_kerberos():

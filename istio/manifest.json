@@ -1,6 +1,7 @@
 {
   "categories": [
-    "data store"
+    "data store",
+    "log collection"
   ],
   "creates_events": false,
   "description": "The istio integration collects data from the istio service mesh and mixer.",
@@ -24,7 +25,9 @@
   "integration_id": "istio",
   "assets": {
     "monitors": {},
-    "dashboards": {},
+    "dashboards": {
+      "Istio base dashboard": "assets/dashboards/istio_overview.json"
+    },
     "service_checks": "assets/service_checks.json"
   }
 }
